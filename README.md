@@ -15,3 +15,9 @@ cut -f 3 -d "," sra_paired_clean.txt | sort | uniq -c | sort -nkr 1 > species.tx
 
 The SRX code (associated to each experiment) was used to retrive the SRR code required for the download of each set of reads. To do so
  the **retrieveSRRcode.py** code was used and the **SRRcode.csv** was generated. 
+
+Once the SRR codes were retrieved, they were used to download the fastq files containing the reads.
+The _SRAtoolkit_ was used to download the files in sra format and then convert them into fastq files (the combo _prefetch_ + _fasterq-dump_ should
+make the process faster than using directly fastq-dump).
+The **downloadSRA.py** code was used to do so and generate a directory _fastq/_ containing a folder for each SRR with inside the 2
+fastq files (paired ends).
