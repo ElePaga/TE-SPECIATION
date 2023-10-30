@@ -19,5 +19,5 @@ The SRX code (associated to each experiment) was used to retrive the SRR code re
 Once the SRR codes were retrieved, they were used to download the fastq files containing the reads.
 The _SRAtoolkit_ was used to download the files in sra format and then convert them into fastq files (the combo _prefetch_ + _fasterq-dump_ should
 make the process faster than using directly fastq-dump).
-The **downloadSRA.py** code was used to do so and generate a directory _fastq/_ containing a folder for each SRR with inside the 2
+The **downloadSRA.py** (in _SRAfiles/_) code was used to do so and generate a directory _fastq/_ containing a folder for each SRR with inside the 2
 fastq files (paired ends).
