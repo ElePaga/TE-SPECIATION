@@ -1,0 +1,16 @@
+RAD-seq
+metagenome
+microbiome
+RNA-seq
+restriction digest
+homo sapiens 
+aquilonia
+transcriptomic
+metagenomic
+exon
+targeted-capture
+bisulfite
+sp.
+uce
+trimmed reads
+Centre of Excellence in Biological interactions
