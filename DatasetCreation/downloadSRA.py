@@ -14,7 +14,7 @@ for sra_id in sra_numbers:
 	genome_n += 1 
 	print("Currently downloading: " + sra_id)
 	prefetch = "prefetch " + sra_id
-	# The prefetch command download the reads file in SRA format
+	# The prefetch command downloads the reads file in SRA format
 	print("The command used was: " + prefetch)
 	subprocess.call(prefetch, shell=True)
 

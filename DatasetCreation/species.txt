@@ -1,4 +1,3 @@
-      9 "Formica exsecta"
       4 "Formica argentea"
       3 "Formica lemani"
       3 "Formica aserva"
@@ -13,6 +12,7 @@
       2 "Formica incerta"
       2 "Formica gnava"
       2 "Formica glacialis"
+      2 "Formica exsecta"
       2 "Formica dakotensis"
       2 "Formica cinerea"
       1 "Polyergus vinosus"
