@@ -10,7 +10,7 @@ grep -vi -f keywordsrmv.txt sra_paired_results.txt > sra_paired_clean.txt
 ```
 Then, a file containing the remaining selected organisms with associated the amount of available entries for each of them was generated (**species.txt**):
 ```shell
-cut -f 3 -d "," sra_paired_clean.txt | sort | uniq -c | sort -nkr 1 > species.txt
+cut -f 3 -d "," sra_paired_clean.txt | sort | uniq -c | sort -nrk 1 > species.txt
 ```
 
 The SRX code (associated to each experiment) was used to retrive the SRR code required for the download of each set of reads. To do so
