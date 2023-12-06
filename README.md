@@ -33,7 +33,7 @@ snakemake --cores 4 --verbose -p --rerun-incomplete -n
 
 To fully execute the snakefile it was used the following command line:
 ```shell 
-snakemake --cores 4 --verbose -p --rerun-incomplete -n
+snakemake --cores 4 --verbose -p --rerun-incomplete
 ```
 
 
