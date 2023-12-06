@@ -21,3 +21,19 @@ The _SRAtoolkit_ was used to download the files in sra format and then convert t
 make the process faster than using directly fastq-dump).
 The **downloadSRA.py** code was used to do so and generate a directory _fastq/_ containing a folder for each SRR with inside the 2
 fastq files (paired ends).
+
+## lcWGS snakemake pipeline
+
+The directory _lcWGS_ contains the **snakefile** for the run of the lcWGS pipeline, to run the file the snakemake environment needs to be activated (**environment_snakemake.yml**).
+
+To perform the dryrun of the code it can be used the following command line:
+```shell 
+snakemake --cores 4 --verbose -p --rerun-incomplete -n
+```
+
+To fully execute the snakefile it was used the following command line:
+```shell 
+snakemake --cores 4 --verbose -p --rerun-incomplete -n
+```
+
+
