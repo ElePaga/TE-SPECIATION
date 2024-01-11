@@ -31,4 +31,4 @@ rule two:
 	threads: 2
 #       conda: 'spades.yaml'
         shell:	
-		'spades.py -1 {input.l} -2 {input.r} -o {output.assembly_folder} -t {threads} --memory 20'
+		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 20'
