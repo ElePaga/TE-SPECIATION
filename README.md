@@ -36,4 +36,4 @@ To fully execute the snakefile it was used the following command line:
 snakemake --cores 4 --verbose -p --rerun-incomplete
 ```
 
-
+To run only a specific rule '-U _RuleName_' con be added to the command line.
