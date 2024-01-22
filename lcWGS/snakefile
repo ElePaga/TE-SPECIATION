@@ -1,8 +1,9 @@
+
 #DEPENDENCIES
 sample = glob_wildcards('../SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
 
 rule all:
-        input: expand('../assemblies/{sample}_spades', sample = sample)
+        input: expand('../mitoz_outputs/{sample}_mitoscaf.result', sample = sample)
 
 # TRIMMOMATIC
 rule one:
@@ -15,7 +16,7 @@ rule one:
 		l_U = '../SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
 		r_U = '../SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
 	threads: 2
-#	conda: '../../miniconda3/envs/snakemake'
+	conda: '../../miniconda3/envs/snakemake'
 	shell:
 		'trimmomatic PE {input.Reads1} {input.Reads2} {output.l_P} {output.l_U} {output.r_P} {output.r_U} -threads {threads} '
 		'ILLUMINACLIP:../../miniconda3/envs/snakemake/share/trimmomatic/adapters/TruSeq3-PE.fa:2:30:10:2:TRUE '
@@ -29,6 +30,65 @@ rule two:
 	output:
 		assembly_folder = '../assemblies/{sample}_spades'
 	threads: 2
-#       conda: 'spades.yaml'
+	conda: '../../miniconda3/envs/snakemake'
         shell:	
 		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 20'
+
+# BLAST
+#rule three:
+#	input:
+#		contigs = rules.two.output.assembly_folder/contigs.fasta
+#	output:
+#		blastn_out = '../blast_outputs/{sample}_blast_out'
+#	threads: 2
+#	shell:
+#		'blastn -query {input.contigs} -db ../../../../../../DATABIG/dbs/NCBI/nt/nt -outfmt "6 qseqid staxids bitscore std" -max_target_seqs 25 -max_hsps 1  -evalue 1e-25 > {output.blastn_out}' 
+
+# MITOZ
+rule four:
+	input:
+		contigs = rules.two.output.assembly_folder
+		
+	output:
+		mitoz_out = '{sample}_mitoscaf'
+	threads: 2
+	conda: 'mitoz'
+	shell:
+		'mitoz findmitoscaf --fastafile {input.contigs}/contigs.fasta --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}'
+	
+rule four_b:
+	input:
+		mitoz_result = rules.four.output.mitoz_out
+	output:
+		mitoz_correct = '../mitoz_outputs/{sample}_mitoscaf.result/{sample}_mitoscaf.mitogenome.fa'
+	threads: 2
+	conda: '../../miniconda3/envs/snakemake'
+	shell:
+		'mv {input.mitoz_result}.result ../mitoz_outputs/; rm {input.mitoz_result}*'
+
+
+'''
+#BOWTIE2
+rule five_a:
+	input:
+		mitogenome = rules.four_b.output.mitoz_correct
+	output:
+		candidate = '{sample}_mtcandidate'
+	threads: 2
+	conda: '../../miniconda3/envs/snakemake'
+	shell:
+		'bowtie2-build {input.mitogenome} {output.candidate}'
+
+rule five_b:
+	input:
+		l = rules.one.output.l_P,
+                r = rules.one.output.r_P,
+		mtcandidate = rules.five_a.output.candidate
+	output:
+		?
+	threads: 2
+	conda: '../../miniconda3/envs/snakemake'
+	shell:
+		'bowtie2 -x {input.mtcandidate} -1 {input.l} -2 {input.r} --un-conc mtless -p {threads}'
+'''
+
