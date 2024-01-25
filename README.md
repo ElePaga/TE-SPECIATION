@@ -28,12 +28,12 @@ The directory _lcWGS_ contains the **snakefile** for the run of the lcWGS pipeli
 
 To perform the dryrun of the code it can be used the following command line:
 ```shell 
-snakemake --cores 4 --verbose -p --rerun-incomplete -n
+snakemake --cores 4 --verbose -p --rerun-incomplete --keep-going --use-conda  -n
 ```
 
 To fully execute the snakefile it was used the following command line:
 ```shell 
-snakemake --cores 4 --verbose -p --rerun-incomplete
+snakemake --cores 4 --verbose -p --rerun-incomplete --keep-going --use-conda
 ```
 
 To run only a specific rule '-U _RuleName_' can be added to the command line.
