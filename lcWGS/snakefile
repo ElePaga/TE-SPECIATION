@@ -1,9 +1,12 @@
-
 #DEPENDENCIES
 sample = glob_wildcards('../SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
+sample_mito = glob_wildcards('{sample_mito}_mitoscaf.result')[0]
 
 rule all:
-        input: expand('../mitoz_outputs/{sample}_mitoscaf.result', sample = sample)
+#	input: expand('../mitoz_outputs/{sample_mito}_mitoscaf.result/{sample_mito}_mitoscaf.mitogenome.fa', sample_mito = sample_mito)
+	input: expand('{sample}_mitoscaf', sample = sample)
+
+
 
 # TRIMMOMATIC
 rule one:
@@ -34,15 +37,6 @@ rule two:
         shell:	
 		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 20'
 
-# BLAST
-#rule three:
-#	input:
-#		contigs = rules.two.output.assembly_folder/contigs.fasta
-#	output:
-#		blastn_out = '../blast_outputs/{sample}_blast_out'
-#	threads: 2
-#	shell:
-#		'blastn -query {input.contigs} -db ../../../../../../DATABIG/dbs/NCBI/nt/nt -outfmt "6 qseqid staxids bitscore std" -max_target_seqs 25 -max_hsps 1  -evalue 1e-25 > {output.blastn_out}' 
 
 # MITOZ
 rule four:
@@ -54,17 +48,7 @@ rule four:
 	threads: 2
 	conda: 'mitoz'
 	shell:
-		'mitoz findmitoscaf --fastafile {input.contigs}/contigs.fasta --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}'
-	
-rule four_b:
-	input:
-		mitoz_result = rules.four.output.mitoz_out
-	output:
-		mitoz_correct = '../mitoz_outputs/{sample}_mitoscaf.result/{sample}_mitoscaf.mitogenome.fa'
-	threads: 2
-	conda: '../../miniconda3/envs/snakemake'
-	shell:
-		'mv {input.mitoz_result}.result ../mitoz_outputs/; rm {input.mitoz_result}*'
+		'mitoz findmitoscaf --fastafile {input.contigs}/contigs.fasta --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {output.mitoz_out}.result ../mitoz_outputs; rm {output.mitoz_out}*'
 
 
 '''
