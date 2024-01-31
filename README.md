@@ -1,5 +1,5 @@
 # TE-SPECIATION
-BELLAAA
+BELLA!
 ## Dataset Creation from NCBI 
 
 The first dataset was retrieved from RSA using _formica_ as search world and _paired_ as filter. The summary of the 3,444 entries was downloaded as a text file (**sra_result_paired.txt**).
