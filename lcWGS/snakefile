@@ -30,13 +30,21 @@ rule one:
 		l_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
 		r_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
 	threads: 2
-	conda: '../../miniconda3/envs/snakemake'
+#	conda: '../../miniconda3/envs/snakemake'
 	shell:
 		'trimmomatic PE {input.Reads1} {input.Reads2} {output.l_P} {output.l_U} {output.r_P} {output.r_U} -threads {threads} '
 		'ILLUMINACLIP:../../miniconda3/envs/snakemake/share/trimmomatic/adapters/TruSeq3-PE.fa:2:30:10:2:TRUE '
 		'LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:95'
 
 # SPADES
+
+'''
+SPAdes is a genome assembler tool.
+It takes as input the two files of paired end reads. 
+Using k-mers it outputs contigs.fasta and scaffold.fasta.
+--isolate is recommended for multi-cell organisms.
+'''
+
 rule two:
 	input:
 		l = rules.one.output.l_P,
@@ -44,13 +52,13 @@ rule two:
 	output:
 		assembly_folder = '../assemblies/{sample}_spades'
 	threads: 2
-	conda: '../../miniconda3/envs/snakemake'
-        shell:	
+#	conda: '../../miniconda3/envs/snakemake'
+	shell:	
 		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 20'
 
 
 # MITOZ
-rule four:
+rule three:
 	input:
 		contigs = rules.two.output.assembly_folder
 		
@@ -61,7 +69,23 @@ rule four:
 	shell:
 		'mitoz findmitoscaf --fastafile {input.contigs}/contigs.fasta --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {output.mitoz_out}.result ../mitoz_outputs; rm {output.mitoz_out}*'
 
+'''
+# FCS-GX
+rule four:
+	input:
+		f = rules.two.output.assembly_folder
+	output:
+		report = '{sample}_fcsgx_out'
+	threads: 2
+#	conda: 'fcsgx'
+	shell:
+#		'python3 ../fcs.py screen genome --fasta {input.f}/contigs.fasta --out-dir ../gx_out/{output.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
+		'cat {input.f}/contigs.fasta | python3 ../fcs.py clean genome --action-report ../gx_out/{output.report}/contigs.72766.fcs_gx_report.txt --output ../gx_out/{output.report}/clean.fasta --contam-fasta-out ../gx_out/{output.report}/contam.fasta'
 
+
+#BOWTIE2
+rule five:
+'''
 '''
 #BOWTIE2
 rule five_a:
@@ -70,7 +94,7 @@ rule five_a:
 	output:
 		candidate = '{sample}_mtcandidate'
 	threads: 2
-	conda: '../../miniconda3/envs/snakemake'
+#	conda: '../../miniconda3/envs/snakemake'
 	shell:
 		'bowtie2-build {input.mitogenome} {output.candidate}'
 
