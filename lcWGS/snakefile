@@ -2,7 +2,7 @@
 sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
 
 rule all:
-	input: expand('{sample}_mitoscaf', sample = sample)
+	input: expand('../gx_out/{sample}_fcsgx_out', sample = sample)
 
 
 
@@ -50,39 +50,40 @@ rule two:
 		l = rules.one.output.l_P,
 		r = rules.one.output.r_P
 	output:
-		assembly_folder = '../assemblies/{sample}_spades'
+		assembly_folder = '../assemblies/{sample}_spades',
+		contigs = '../assemblies/{sample}_spades/contigs.fasta'
 	threads: 2
 #	conda: '../../miniconda3/envs/snakemake'
 	shell:	
-		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 20'
+		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 100'
 
 
 # MITOZ
 rule three:
 	input:
-		contigs = rules.two.output.assembly_folder
+		cont = rules.two.output.contigs
 		
 	output:
 		mitoz_out = '{sample}_mitoscaf'
 	threads: 2
 	conda: 'mitoz'
 	shell:
-		'mitoz findmitoscaf --fastafile {input.contigs}/contigs.fasta --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {output.mitoz_out}.result ../mitoz_outputs; rm {output.mitoz_out}*'
+		'mitoz findmitoscaf --fastafile {input.cont} --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {output.mitoz_out}.result ../mitoz_outputs; rm {output.mitoz_out}*'
 
-'''
+
 # FCS-GX
 rule four:
 	input:
-		f = rules.two.output.assembly_folder
+		f = rules.two.output.contigs
 	output:
-		report = '{sample}_fcsgx_out'
+		report = '../gx_out/{sample}_fcsgx_out'
 	threads: 2
 #	conda: 'fcsgx'
 	shell:
-#		'python3 ../fcs.py screen genome --fasta {input.f}/contigs.fasta --out-dir ../gx_out/{output.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
-		'cat {input.f}/contigs.fasta | python3 ../fcs.py clean genome --action-report ../gx_out/{output.report}/contigs.72766.fcs_gx_report.txt --output ../gx_out/{output.report}/clean.fasta --contam-fasta-out ../gx_out/{output.report}/contam.fasta'
+		'python3 ../fcs.py screen genome --fasta {input.f} --out-dir {output.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
+		'cat {input.f} | python3 ../fcs.py clean genome --action-report {output.report}/contigs.72766.fcs_gx_report.txt --output {output.report}/clean.fasta --contam-fasta-out {output.report}/contam.fasta'
 
-
+'''
 #BOWTIE2
 rule five:
 '''
