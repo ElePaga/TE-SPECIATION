@@ -2,7 +2,7 @@
 sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
 
 rule all:
-	input: expand('../gx_out/{sample}_fcsgx_out', sample = sample)
+	input: expand('../minimap_out/{sample}_sr.bam', sample = sample)
 
 
 
@@ -20,7 +20,7 @@ Command line usage:
  - MINLEN -> drop reads below the 95 bases long
 '''
 
-rule one:
+rule trimmomatic:
 	input:
 		Reads1 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
 		Reads2 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_2.fastq'
@@ -45,10 +45,10 @@ Using k-mers it outputs contigs.fasta and scaffold.fasta.
 --isolate is recommended for multi-cell organisms.
 '''
 
-rule two:
+rule spades:
 	input:
-		l = rules.one.output.l_P,
-		r = rules.one.output.r_P
+		l = rules.trimmomatic.output.l_P,
+		r = rules.trimmomatic.output.r_P
 	output:
 		assembly_folder = '../assemblies/{sample}_spades',
 		contigs = '../assemblies/{sample}_spades/contigs.fasta'
@@ -59,12 +59,18 @@ rule two:
 
 
 # MITOZ
-rule three:
+
+'''
+MitoZ provides a "one-click" solution to get annotated mitogenomes from raw data fastq files.
+-findmitoscaf searches for mitochondrial sequences from input fasta file.
+'''
+
+rule mitoz:
 	input:
-		cont = rules.two.output.contigs
-		
+		cont = rules.spades.output.contigs		
 	output:
-		mitoz_out = '{sample}_mitoscaf'
+		mitoz_out = '{sample}_mitoscaf',
+		result = '../mitoz_out/{sample}_mitoscaf.result/{sample}_mitoscaf.mitogenome.fa'
 	threads: 2
 	conda: 'mitoz'
 	shell:
@@ -72,43 +78,61 @@ rule three:
 
 
 # FCS-GX
-rule four:
+rule fcs:
 	input:
-		f = rules.two.output.contigs
+		f = rules.spades.output.contigs
 	output:
-		report = '../gx_out/{sample}_fcsgx_out'
+		report = '../gx_out/{sample}_fcsgx_out',
+		contam = '../gx_out/{sample}_fcsgx_out/contam.fasta'
 	threads: 2
 #	conda: 'fcsgx'
 	shell:
 		'python3 ../fcs.py screen genome --fasta {input.f} --out-dir {output.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
-		'cat {input.f} | python3 ../fcs.py clean genome --action-report {output.report}/contigs.72766.fcs_gx_report.txt --output {output.report}/clean.fasta --contam-fasta-out {output.report}/contam.fasta'
+		'cat {input.f} | python3 ../fcs.py clean genome --action-report {output.report}/contigs.72766.fcs_gx_report.txt --output {output.report}/clean.fasta --contam-fasta-out {output.contam}'
 
-'''
-#BOWTIE2
-rule five:
-'''
-'''
-#BOWTIE2
-rule five_a:
+
+# MERGING CONTAMINANTS
+rule merge:
 	input:
-		mitogenome = rules.four_b.output.mitoz_correct
+		mito = rules.mitoz.output.result,
+		contaminant = rules.fcs.output.contam
 	output:
-		candidate = '{sample}_mtcandidate'
-	threads: 2
-#	conda: '../../miniconda3/envs/snakemake'
+		ToRemove = '../ToRemove/{sample}_ToRemove.fasta'
 	shell:
-		'bowtie2-build {input.mitogenome} {output.candidate}'
+		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant} >> {output.ToRemove}'
 
-rule five_b:
+
+# MINIMAP2
+rule minimap:
 	input:
-		l = rules.one.output.l_P,
-                r = rules.one.output.r_P,
-		mtcandidate = rules.five_a.output.candidate
+		g  = rules.merge.output.ToRemove, 
+		reads1 = rules.trimmomatic.output.l_P,
+		reads2 = rules.trimmomatic.output.r_P
 	output:
-		?
-	threads: 2
-	conda: '../../miniconda3/envs/snakemake'
+		bam = '../minimap_out/{sample}_sr.bam',
+		sorted_bam = '../minimap_out/{sample}_sr.sorted.bam'
+	threads:
+		2
 	shell:
-		'bowtie2 -x {input.mtcandidate} -1 {input.l} -2 {input.r} --un-conc mtless -p {threads}'
-'''
+		'minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}; '
+		'samtools sort -@10 -o {output.sorted_bam} {output.bam}; '
+		'rm {output.bam}; '
+		'samtools index {output.sorted_bam}'
 
+# SAMTOOLS
+rule samtools:
+	input:
+		s_bam = rules.minimap.output.sorted_bam
+	output:
+		fastq = '../minimap_out/{sample}.mapped_1.fastq'
+	shell:
+		'samtools fastq -F 10 -@ 10 {input.s_bam} > {output.fastq}'
+	
+
+rule samtools_flagstat:
+	input:
+		fq = rules.samtools.output.fastq
+	output:
+		flag = '../minimap_out/{sample}_sr.flagstats'
+	shell:
+		'samtools flagstat {input.fq} > {output.flag}'
