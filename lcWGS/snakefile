@@ -59,6 +59,12 @@ rule spades:
 
 
 # MITOZ
+
+'''
+MitoZ provides a "one-click" solution to get annotated mitogenomes from raw data fastq files.
+-findmitoscaf searches for mitochondrial sequences from input fasta file.
+'''
+
 rule mitoz:
 	input:
 		cont = rules.spades.output.contigs		
@@ -103,9 +109,30 @@ rule minimap:
 		reads1 = rules.trimmomatic.output.l_P,
 		reads2 = rules.trimmomatic.output.r_P
 	output:
-		bam = '../minimap_out/{sample}_sr.bam'
+		bam = '../minimap_out/{sample}_sr.bam',
+		sorted_bam = '../minimap_out/{sample}_sr.sorted.bam'
 	threads:
 		2
 	shell:
-		'minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb - > {output.bam}'
+		'minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}; '
+		'samtools sort -@10 -o {output.sorted_bam} {output.bam}; '
+		'rm {output.bam}; '
+		'samtools index {output.sorted_bam}'
 
+# SAMTOOLS
+rule samtools:
+	input:
+		s_bam = rules.minimap.output.sorted_bam
+	output:
+		fastq = '../minimap_out/{sample}.mapped_1.fastq'
+	shell:
+		'samtools fastq -F 10 -@ 10 {input.s_bam} > {output.fastq}'
+	
+
+rule samtools_flagstat:
+	input:
+		fq = rules.samtools.output.fastq
+	output:
+		flag = '../minimap_out/{sample}_sr.flagstats'
+	shell:
+		'samtools flagstat {input.fq} > {output.flag}'
