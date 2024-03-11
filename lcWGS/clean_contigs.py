@@ -29,11 +29,14 @@ while idx != len(Lines):
 		nodes_to_rm.remove(Lines[idx])
 		Lines.remove(Lines[idx])
 		while True:
-			if Lines[idx][0] != '>':
-				Lines.remove(Lines[idx])
+			if idx < len(Lines): 
+				if Lines[idx][0] != '>':
+					Lines.remove(Lines[idx])
+				else:
+					print(Lines[idx])
+					idx -= 1
+					break
 			else:
-				print(Lines[idx])
-				idx -= 1
 				break
 	idx += 1
 
