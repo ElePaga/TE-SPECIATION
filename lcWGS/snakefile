@@ -1,8 +1,8 @@
 #DEPENDENCIES
-sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
-
+#sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
+sample = ['SRR15979873','SRR15979857','SRR15979850']
 rule all:
-	input: expand('../minimap_out/{sample}_sr.flagstats', sample = sample)
+	input: expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample)
 #	input: expand('../ToRemove/{sample}_ToRemove.fasta', sample = sample)
 
 
@@ -109,31 +109,41 @@ rule minimap:
 		reads1 = rules.trimmomatic.output.l_P,
 		reads2 = rules.trimmomatic.output.r_P
 	output:
-		bam = '../minimap_out/{sample}_sr.bam',
-		sorted_bam = '../minimap_out/{sample}_sr.sorted.bam'
+		bam = '../minimap_out/{sample}/{sample}_sr.bam',
 	threads:
 		10
 	shell:
-		'minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}; '
-		'samtools sort -@10 -o {output.sorted_bam} {output.bam}; '
-		'rm {output.bam}; '
-		'samtools index {output.sorted_bam}'
-
+		'minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}'	
 # SAMTOOLS
-rule samtools:
+
+rule samtools_sorted_bam:
 	input:
-		s_bam = rules.minimap.output.sorted_bam
+		b = rules.minimap.output.bam
 	output:
-		fastq = '../minimap_out/{sample}.mapped_1.fastq'
+		sorted = '../minimap_out/{sample}/{sample}_sr.sorted.bam',
+		index = '../minimap_out/{sample}/{sample}_sr.sorted.bam.bai'
 	shell:
-		'samtools fastq -F 10 -@ 10 {input.s_bam} > {output.fastq}'
-	
+		'samtools sort -@10 -o {output.sorted} {input.b}; '
+		'rm {input.b}; '
+		'samtools index {output.sorted}'
+		
+rule samtools_fastq:
+	input:
+		s_bam = rules.samtools_sorted_bam.output.sorted
+	output:
+		fastq1 = '../minimap_out/{sample}/{sample}.clean_1.fastq',
+		fastq2 = '../minimap_out/{sample}/{sample}.clean_2.fastq'
+	shell:
+		'samtools fastq -F 10 -@ 10 {input.s_bam} -1 {output.fastq1} -2 {output.fastq2}'
 
 rule samtools_flagstat:
 	input:
-		fq = rules.samtools.output.fastq
+		fq1 = rules.samtools_fastq.output.fastq1,
+		fq2 = rules.samtools_fastq.output.fastq2
 	output:
-		flag = '../minimap_out/{sample}_sr.flagstats'
+		flag1 = '../minimap_out/{sample}/{sample}_sr1.flagstats',
+		flag2 = '../minimap_out/{sample}/{sample}_sr2.flagstats'
 	shell:
-		'samtools flagstat {input.fq} > {output.flag}'
+		'samtools flagstat {input.fq1} > {output.flag1}; '
+		'samtools flagstat {input.fq2} > {output.flag2}'
 
