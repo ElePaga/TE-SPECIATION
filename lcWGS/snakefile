@@ -1,6 +1,8 @@
 #DEPENDENCIES
 #sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
-sample = ['SRR15979873','SRR15979857','SRR15979850']
+#sample = ['SRR15979864'] aserva
+sample = ['SRR15845527'] #exsecta
+
 rule all:
 	input: expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample)
 #	input: expand('../ToRemove/{sample}_ToRemove.fasta', sample = sample)
@@ -55,7 +57,7 @@ rule spades:
 	threads: 2
 #	conda: '../../miniconda3/envs/snakemake'
 	shell:	
-		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 100'
+		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 200'
 
 
 # MITOZ
@@ -101,11 +103,20 @@ rule merge:
 	shell:
 		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant} >> {output.ToRemove}'
 
+# OBTAIN CLEAN ASSEMBLIES
+rule clean:
+	input:
+		all_c = rules.spades.output.contigs,
+		rm_c = rules.merge.output.ToRemove
+	output:
+		clean_c = '../clean_assemblies/{sample}_output_clean.fasta'
+	shell:
+		'python3 clean_contigs_snake.py {input.all_c} {input.rm_c}'
 
 # MINIMAP2
 rule minimap:
 	input:
-		g  = rules.merge.output.ToRemove, 
+		g  = rules.clean.output.clean_c,
 		reads1 = rules.trimmomatic.output.l_P,
 		reads2 = rules.trimmomatic.output.r_P
 	output:
@@ -134,7 +145,7 @@ rule samtools_fastq:
 		fastq1 = '../minimap_out/{sample}/{sample}.clean_1.fastq',
 		fastq2 = '../minimap_out/{sample}/{sample}.clean_2.fastq'
 	shell:
-		'samtools fastq -F 10 -@ 10 {input.s_bam} -1 {output.fastq1} -2 {output.fastq2}'
+		'samtools fastq -f 2 -@ 10 {input.s_bam} -1 {output.fastq1} -2 {output.fastq2}'
 
 rule samtools_flagstat:
 	input:
