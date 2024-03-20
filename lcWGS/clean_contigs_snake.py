@@ -73,8 +73,8 @@ file_rm.close()
 file_c.close()
 contigs_list.close()
 
-#command = 'seqtk subseq ' + f_c + ' ' + c_l + ' > ../clean_assemblies/' + sample + '_output_clean.fasta'
-command = 'seqtk subseq ' + f_c + ' ' + c_l + ' > ../PROVA/' + sample + '_output_clean.fasta'
+command = 'seqtk subseq ' + f_c + ' ' + c_l + ' > ../clean_assemblies/' + sample + '_output_clean.fasta'
+#command = 'seqtk subseq ' + f_c + ' ' + c_l + ' > ../PROVA/' + sample + '_output_clean.fasta'
 subprocess.call(command, shell=True)
 
 
