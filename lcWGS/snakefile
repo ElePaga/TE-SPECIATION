@@ -51,13 +51,16 @@ rule spades:
 	input:
 		l = rules.trimmomatic.output.l_P,
 		r = rules.trimmomatic.output.r_P
+	params:
+		s = '../assemblies/{sample}_spades'
 	output:
-		assembly_folder = '../assemblies/{sample}_spades',
+#		assembly_folder = '../assemblies/{sample}_spades',
 		contigs = '../assemblies/{sample}_spades/contigs.fasta'
-	threads: 2
+	threads: 4
 #	conda: '../../miniconda3/envs/snakemake'
 	shell:	
-		'spades.py -1 {input.l} -2 {input.r} --isolate -o {output.assembly_folder} -t {threads} --memory 200'
+		'spades.py -1 {input.l} -2 {input.r} --isolate -o {params.s} -t {threads} --memory 200'
+
 
 
 # MITOZ
@@ -80,6 +83,11 @@ rule mitoz:
 
 
 # FCS-GX
+'''
+FCS, a quality assurance process used to make data suitable for submission.
+FCS-GX is a sub-part of FCS searches for sequences from a wide range of organisms including bacteria, fungi, protists, viruses, 
+and others to identify sequences that don’t look like they are from the intended organism.
+''
 rule fcs:
 	input:
 		f = rules.spades.output.contigs
