@@ -19,7 +19,7 @@ print(dic)
 samples_list = os.listdir("../DatasetCreation/SRAfiles/fastq/")
 print(samples_list)
 
-columns = ['id','species','#reads_before1','#reads_after1', '#reads_before2','#reads_after2','n_size','genome_size']
+columns = ['id','species','#reads_before1','#reads_before2','#reads_after1','#reads_after2','n_size','genome_size']
 
 TABLE = pd.DataFrame(columns=columns)
 
@@ -34,7 +34,8 @@ for el in samples_list:
 
 idx2 = 0
 for el in samples_list:
-	grep = "grep -c '+' ../DatasetCreation/SRAfiles/fastq/" + el + "/" + el + ".trimmed_1P.fq"
+	print('1_' + str(idx2))
+	grep = "grep -c '@' ../DatasetCreation/SRAfiles/fastq/" + el + "/" + el + ".trimmed_1P.fq"
 	n = os.popen(grep).read()
 	number = n.replace("\n","")
 	dic[el] = number
@@ -42,9 +43,11 @@ for el in samples_list:
 	TABLE.loc[idx2, '#reads_before1'] = val
 	idx2 += 1
 
+
 idx3 = 0
 for el in samples_list:
-	grep = "grep -c '+' ../DatasetCreation/SRAfiles/fastq/" + el + "/" + el + ".trimmed_2P.fq"
+	print('2_' + str(idx3))
+	grep = "grep -c '@' ../DatasetCreation/SRAfiles/fastq/" + el + "/" + el + ".trimmed_2P.fq"
 	n = os.popen(grep).read()
 	number = n.replace("\n","")
 	dic[el] = number
@@ -54,5 +57,17 @@ for el in samples_list:
 
 
 
+idx4 = 0
+for el in samples_list:
+        print('1_' + str(idx4))
+        grep = "grep -c '>' ../clean_assemblies/" + el + "_output_clean.fasta"
+        n = os.popen(grep).read()
+        number = n.replace("\n","")
+        dic[el] = number
+        val = dic[el]
+        TABLE.loc[idx4, 'n_size'] = val
+        idx4 += 1
+
 print(TABLE)
 
+TABLE.to_csv('TABLE.csv',index=False)
