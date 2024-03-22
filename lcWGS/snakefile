@@ -72,14 +72,15 @@ MitoZ provides a "one-click" solution to get annotated mitogenomes from raw data
 
 rule mitoz:
 	input:
-		cont = rules.spades.output.contigs		
+		cont = rules.spades.output.contigs
+	params:
+		mitoz_out = '{sample}_mitoscaf'		
 	output:
-		mitoz_out = '{sample}_mitoscaf',
 		result = '../mitoz_outputs/{sample}_mitoscaf.result/{sample}_mitoscaf.mitogenome.fa'
 	threads: 2
 	conda: 'mitoz'
 	shell:
-		'mitoz findmitoscaf --fastafile {input.cont} --clade Arthropoda --outprefix {output.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {output.mitoz_out}.result ../mitoz_outputs; rm {output.mitoz_out}*'
+		'mitoz findmitoscaf --fastafile {input.cont} --clade Arthropoda --outprefix {params.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {params.mitoz_out}.result ../mitoz_outputs; rm {params.mitoz_out}*'
 
 
 # FCS-GX
@@ -87,18 +88,19 @@ rule mitoz:
 FCS, a quality assurance process used to make data suitable for submission.
 FCS-GX is a sub-part of FCS searches for sequences from a wide range of organisms including bacteria, fungi, protists, viruses, 
 and others to identify sequences that don’t look like they are from the intended organism.
-''
+'''
 rule fcs:
 	input:
 		f = rules.spades.output.contigs
+	params:
+		report = '../gx_out/{sample}_fcsgx_out'
 	output:
-		report = '../gx_out/{sample}_fcsgx_out',
 		contam = '../gx_out/{sample}_fcsgx_out/contam.fasta'
 	threads: 2
 #	conda: 'fcsgx'
 	shell:
-		'python3 ../fcs.py screen genome --fasta {input.f} --out-dir {output.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
-		'cat {input.f} | python3 ../fcs.py clean genome --action-report {output.report}/contigs.72766.fcs_gx_report.txt --output {output.report}/clean.fasta --contam-fasta-out {output.contam}'
+		'python3 ../fcs.py screen genome --fasta {input.f} --out-dir {params.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
+		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {output.contam}'
 
 
 # MERGING CONTAMINANTS
