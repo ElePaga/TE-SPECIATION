@@ -1,11 +1,14 @@
 #DEPENDENCIES
 #sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
 #sample = ['SRR15979864'] aserva
-sample = ['SRR15845527'] #exsecta
+#sample = ['SRR15845527'] #exsecta
+sample = ['SRR5819598']
 
 rule all:
-	input: expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample)
-#	input: expand('../ToRemove/{sample}_ToRemove.fasta', sample = sample)
+	input:
+		expand('../g_size/{sample}/genomescope/{sample}_output/summary.txt', sample = sample),
+#		expand('../g_size/{sample}/backmap/contigs.fasta.sort_stats/', sample = sample)
+		expand('../logs/backmap/backmap_{sample}.log', sample = sample)
 
 
 # TRIMMOMATIC
@@ -32,11 +35,13 @@ rule trimmomatic:
 		l_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
 		r_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
 	threads: 2
+	log:
+		'../logs/trimmomatic/trimmomatic_{sample}.log'
 #	conda: '../../miniconda3/envs/snakemake'
 	shell:
-		'trimmomatic PE {input.Reads1} {input.Reads2} {output.l_P} {output.l_U} {output.r_P} {output.r_U} -threads {threads} '
+		'(trimmomatic PE {input.Reads1} {input.Reads2} {output.l_P} {output.l_U} {output.r_P} {output.r_U} -threads {threads} '
 		'ILLUMINACLIP:../../miniconda3/envs/snakemake/share/trimmomatic/adapters/TruSeq3-PE.fa:2:30:10:2:TRUE '
-		'LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:95'
+		'LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:95) 2> {log}'
 
 # SPADES
 
@@ -57,9 +62,11 @@ rule spades:
 #		assembly_folder = '../assemblies/{sample}_spades',
 		contigs = '../assemblies/{sample}_spades/contigs.fasta'
 	threads: 4
+	log:
+		'../logs/spades/spades_{sample}.log'
 #	conda: '../../miniconda3/envs/snakemake'
 	shell:	
-		'spades.py -1 {input.l} -2 {input.r} --isolate -o {params.s} -t {threads} --memory 200'
+		'(spades.py -1 {input.l} -2 {input.r} --isolate -o {params.s} -t {threads} --memory 400) 2> {log}'
 
 
 
@@ -79,8 +86,10 @@ rule mitoz:
 		result = '../mitoz_outputs/{sample}_mitoscaf.result/{sample}_mitoscaf.mitogenome.fa'
 	threads: 2
 	conda: 'mitoz'
+	log:
+		'../logs/mitoz/mitoz_{sample}.log'
 	shell:
-		'mitoz findmitoscaf --fastafile {input.cont} --clade Arthropoda --outprefix {params.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {params.mitoz_out}.result ../mitoz_outputs; rm {params.mitoz_out}*'
+		'(mitoz findmitoscaf --fastafile {input.cont} --clade Arthropoda --outprefix {params.mitoz_out}  --requiring_taxa Arthropoda --min_abundance 0 --thread_number {threads}; mv {params.mitoz_out}.result ../mitoz_outputs; rm {params.mitoz_out}*) 2> {log}'
 
 
 # FCS-GX
@@ -97,10 +106,12 @@ rule fcs:
 	output:
 		contam = '../gx_out/{sample}_fcsgx_out/contam.fasta'
 	threads: 2
+	log:
+		'../logs/fcs/fcs_{sample}.log'
 #	conda: 'fcsgx'
 	shell:
-		'python3 ../fcs.py screen genome --fasta {input.f} --out-dir {params.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
-		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {output.contam}'
+		'(python3 ../fcs.py screen genome --fasta {input.f} --out-dir {params.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
+		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {output.contam}) 2> {log}'
 
 
 # MERGING CONTAMINANTS
@@ -133,8 +144,10 @@ rule minimap:
 		bam = '../minimap_out/{sample}/{sample}_sr.bam',
 	threads:
 		10
+	log:
+		'../logs/minimap2/minimap2_{sample}.log'
 	shell:
-		'minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}'	
+		'(minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}) 2> {log}'	
 # SAMTOOLS
 
 rule samtools_sorted_bam:
@@ -168,3 +181,53 @@ rule samtools_flagstat:
 		'samtools flagstat {input.fq1} > {output.flag1}; '
 		'samtools flagstat {input.fq2} > {output.flag2}'
 
+
+# GENOMESIZE
+
+rule backmap:
+	input:
+		assembly = rules.clean.output.clean_c,
+		p1 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
+		p2 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_2.fastq'
+	output:
+		log_b = '../logs/backmap/backmap_{sample}.log'
+#		size = '../g_size/{sample}/backmap/contigs.fasta.sort_stats/'
+	params:
+		out = '../g_size/{sample}/backmap/'
+	threads: 2
+	log:
+		'../logs/backmap/backmap_{sample}.log'
+	shell:
+		'(../../backmap/backmap.pl -a {input.assembly} -p {input.p1},{input.p2} -o {params.out} -t {threads}; '
+		'rm -r ../g_size/{sample}/backmap/*) 2> {log}'
+
+rule jellyfish1:
+	input:
+		f1 = rules.samtools_fastq.output.fastq1,
+		f2 = rules.samtools_fastq.output.fastq2
+	output:
+		readsj = '../g_size/{sample}/genomescope/{sample}_reads.jf'
+	threads: 4
+	shell:
+		'jellyfish count -C -m 21 -s 1000000000 -t {threads} {input.f1} {input.f2} -o {output.readsj}'
+
+rule jellyfish2:
+	input:
+		rj = rules.jellyfish1.output.readsj
+	output:
+		histoj = '../g_size/{sample}/genomescope/{sample}_reads.histo'
+	threads: 4
+	shell:
+		'jellyfish histo -t {threads} {input.rj} > {output.histoj}'
+
+rule genomescope:
+	input:
+		histo = rules.jellyfish2.output.histoj
+	output:
+		sizej = '../g_size/{sample}/genomescope/{sample}_output/summary.txt'
+	params:
+		gout = '../g_size/{sample}/genomescope/{sample}_output'
+	log:
+		'../logs/genomescope/genomescope_{sample}.log'
+	shell:
+		'(Rscript ../../genomescope/genomescope.R {input.histo} 21 101 {params.gout}) 2> {log}'
