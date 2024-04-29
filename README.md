@@ -23,8 +23,8 @@ fastq files (paired ends).
 
 ## INFO folder
 
-The INFO folder contains scripts and tables to gather important info about the dataset samples.
-To run the **sample:info.py** script the **environment_info.yml** needs to be activated.
+The INFO folder contains scripts and tables to gather important info about the dataset samples. 
+To run the **sample_info.py** script the **environment_info.yml** needs to be activated.
 
 ## lcWGS snakemake pipeline
 
@@ -32,8 +32,8 @@ The directory _lcWGS_ contains the **snakefile** for the run of the lcWGS pipeli
 What is more, the conda environments to run _mitoz_ and _busco_ are required (**environment_mitoz.yml**,**environment_busco.yml**).
 In addition, the following sripts/libraries need to be installed: **fcs.py** (https://github.com/ncbi/fcs-gx), **minimap2** (https://github.com/lh3/minimap2),
 **sammtools** (https://github.com/samtools/samtools?tab=readme-ov-file), **backmap.pl** (https://github.com/schellt/backmap), **jellyfish** (https://github.com/gmarcais/Jellyfish),
-**genomescope.R** (https://github.com/schatzlab/genomescope).
-**NB.** Path to some of the above scripts/libraries might be adjusted based on the download folder. 
+**genomescope.R** (https://github.com/schatzlab/genomescope). 
+**NB.** Path to some of the above scripts/libraries might be adjusted based on the download folders. 
 
 To perform the dryrun of the code it can be used the following command line:
 ```shell 
