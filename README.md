@@ -21,9 +21,19 @@ make the process faster than using directly fastq-dump).
 The **downloadSRA.py** code was used to do so and generate a directory _fastq/_ containing a folder for each SRR with inside the 2
 fastq files (paired ends).
 
+## INFO folder
+
+The INFO folder contains scripts and tables to gather important info about the dataset samples.
+To run the **sample:info.py** script the **environment_info.yml** needs to be activated.
+
 ## lcWGS snakemake pipeline
 
 The directory _lcWGS_ contains the **snakefile** for the run of the lcWGS pipeline, to run the file the snakemake environment needs to be activated (**environment_snakemake.yml**).
+What is more, the conda environments to run _mitoz_ and _busco_ are required (**environment_mitoz.yml**,**environment_busco.yml**).
+In addition, the following sripts/libraries need to be installed: **fcs.py** (https://github.com/ncbi/fcs-gx), **minimap2** (https://github.com/lh3/minimap2),
+**sammtools** (https://github.com/samtools/samtools?tab=readme-ov-file), **backmap.pl** (https://github.com/schellt/backmap), **jellyfish** (https://github.com/gmarcais/Jellyfish),
+**genomescope.R** (https://github.com/schatzlab/genomescope).
+**NB.** Path to some of the above scripts/libraries might be adjusted based on the download folder. 
 
 To perform the dryrun of the code it can be used the following command line:
 ```shell 
@@ -35,4 +45,4 @@ To fully execute the snakefile it was used the following command line:
 snakemake --cores 4 --verbose -p --rerun-incomplete --keep-going --use-conda
 ```
 
-To run only a specific rule '-U _RuleName_' can be added to the command line.
+To run only up to specific rule '-U _RuleName_' can be added to the command line.
