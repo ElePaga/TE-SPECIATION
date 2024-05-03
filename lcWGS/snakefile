@@ -4,14 +4,16 @@
 #sample = ['SRR15845527'] #exsecta
 #sample = ['SRR5819598']
 
-sample = ['SRR15979878', 'SRR15845528', 'SRR5819598']
+#sample = ['SRR15979878', 'SRR15845528', 'SRR5819598']
+#sample = ['SRR15845528']
+sample = ['SRR15979878']
 
 rule all:
 	input:
 		expand('../g_size/{sample}/genomescope/{sample}_output/summary.txt', sample = sample),
-		expand('../g_size/{sample}/backmap/contigs.fasta.sort_stats/', sample = sample),
+#		expand('../g_size/{sample}/backmap/contigs.fasta.sort_stats/', sample = sample),
 		expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample),
-		expand('../busco_out/{sample}_busco', sample = sample)
+		expand('../busco_out/{sample}_busco/short_summary.specific.metazoa_odb10.{sample}_busco.txt', sample = sample)
 
 # TRIMMOMATIC
 
@@ -63,7 +65,7 @@ rule spades:
 	output:
 #		assembly_folder = '../assemblies/{sample}_spades',
 		contigs = '../assemblies/{sample}_spades/contigs.fasta'
-	threads: 8
+	threads: 4
 	log:
 		'../logs/spades/spades_{sample}.log'
 #	conda: '../../miniconda3/envs/snakemake'
@@ -106,14 +108,14 @@ rule fcs:
 	params:
 		report = '../gx_out/{sample}_fcsgx_out'
 	output:
-		contam = '../gx_out/{sample}_fcsgx_out/contam.fasta'
+		contam = directory('../gx_out/{sample}_fcsgx_out')
 	threads: 8
 	log:
 		'../logs/fcs/fcs_{sample}.log'
 #	conda: 'fcsgx'
 	shell:
 		'(python3 ../fcs.py screen genome --fasta {input.f} --out-dir {params.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
-		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {output.contam}) 2> {log}'
+		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {params.report}/contam.fasta) 2> {log}'
 
 
 # MERGING CONTAMINANTS
@@ -124,7 +126,7 @@ rule merge:
 	output:
 		ToRemove = '../ToRemove/{sample}_ToRemove.fasta'
 	shell:
-		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant} >> {output.ToRemove}'
+		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant}/contam.fasta >> {output.ToRemove}'
 
 # OBTAIN CLEAN ASSEMBLIES
 rule clean:
@@ -196,7 +198,7 @@ rule backmap:
 		size = '../g_size/{sample}/backmap/contigs.fasta.sort_stats/'
 	params:
 		out = '../g_size/{sample}/backmap/'
-	threads: 8
+	threads: 4
 	log:
 		'../logs/backmap/backmap_{sample}.log'
 	shell:
@@ -209,7 +211,7 @@ rule jellyfish1:
 		f2 = rules.samtools_fastq.output.fastq2
 	output:
 		readsj = '../g_size/{sample}/genomescope/{sample}_reads.jf'
-	threads: 8
+	threads: 4
 	shell:
 		'jellyfish count -C -m 21 -s 1000000000 -t {threads} {input.f1} {input.f2} -o {output.readsj}'
 
@@ -218,7 +220,7 @@ rule jellyfish2:
 		rj = rules.jellyfish1.output.readsj
 	output:
 		histoj = '../g_size/{sample}/genomescope/{sample}_reads.histo'
-	threads: 8
+	threads: 4
 	shell:
 		'jellyfish histo -t {threads} {input.rj} > {output.histoj}'
 
@@ -240,10 +242,12 @@ rule busco:
 	input:
 		clean_f = rules.clean.output.clean_c 
 	output:
-		bout = '../busco_out/{sample}_busco'
-	conda: 'busco'
+		bout = '../busco_out/{sample}_busco/short_summary.specific.metazoa_odb10.{sample}_busco.txt'
+	params:
+		bout_fold = '../busco_out/{sample}_busco'
+	conda: 'BuscO'
 	threads: 8
 	log:
 		'../logs/busco/buco_{sample}.log'
 	shell:
-		'(busco -i {input.clean_f} -o {output.bout} --mode genome -c {threads} -l metazoa_odb10) 2> {log}'	
+		'(busco -i {input.clean_f} -o {params.bout_fold} --mode genome -c {threads} -l metazoa_odb10) 2> {log}'	
