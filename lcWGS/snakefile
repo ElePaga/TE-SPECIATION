@@ -13,7 +13,7 @@ rule all:
 		expand('../g_size/{sample}/genomescope/{sample}_output/summary.txt', sample = sample),
 #		expand('../g_size/{sample}/backmap/contigs.fasta.sort_stats/', sample = sample),
 		expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample),
-		expand('../busco_out/{sample}_busco/short_summary.specific.metazoa_odb10.{sample}_busco.txt', sample = sample)
+		expand('../busco_out/{sample}_busco', sample = sample)
 
 # TRIMMOMATIC
 
@@ -242,7 +242,7 @@ rule busco:
 	input:
 		clean_f = rules.clean.output.clean_c 
 	output:
-		bout = '../busco_out/{sample}_busco/short_summary.specific.metazoa_odb10.{sample}_busco.txt'
+		directory('../busco_out/{sample}_busco')
 	params:
 		bout_fold = '../busco_out/{sample}_busco'
 	conda: 'BuscO'
