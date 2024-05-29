@@ -1,12 +1,5 @@
 #DEPENDENCIES
-sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq.gz')[0]
-#sample = ['SRR15979864'] aserva
-#sample = ['SRR15845527'] #exsecta
-#sample = ['SRR5819598']
-
-#sample = ['SRR15979878', 'SRR15845528', 'SRR5819598']
-#sample = ['SRR15845528']
-#sample = ['SRR15979878']
+sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
 
 rule all:
 	input:
@@ -40,7 +33,6 @@ rule trimmomatic:
 	threads: 4
 	log:
 		'../logs/trimmomatic/trimmomatic_{sample}.log'
-#	conda: '../../miniconda3/envs/snakemake'
 	shell:
 		'(trimmomatic PE {input.Reads1} {input.Reads2} {output.l_P} {output.l_U} {output.r_P} {output.r_U} -threads {threads} '
 		'ILLUMINACLIP:../../miniconda3/envs/snakemake/share/trimmomatic/adapters/TruSeq3-PE.fa:2:30:10:2:TRUE '
@@ -62,12 +54,10 @@ rule spades:
 	params:
 		s = '../assemblies/{sample}_spades'
 	output:
-#		assembly_folder = '../assemblies/{sample}_spades',
 		contigs = '../assemblies/{sample}_spades/contigs.fasta'
 	threads: 8
 	log:
 		'../logs/spades/spades_{sample}.log'
-#	conda: '../../miniconda3/envs/snakemake'
 	shell:	
 		'(spades.py -1 {input.l} -2 {input.r} --isolate -o {params.s} -t {threads} --memory 400) 2> {log}'
 
@@ -111,7 +101,6 @@ rule fcs:
 	threads: 8
 	log:
 		'../logs/fcs/fcs_{sample}.log'
-#	conda: 'fcsgx'
 	shell:
 		'(python3 ../fcs.py screen genome --fasta {input.f} --out-dir {params.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
 		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {output.contam}) 2> {log}'
