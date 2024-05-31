@@ -142,7 +142,7 @@ for el in srr:
         idx7 += 1
 
 
-df_busco = pd.read_csv('KEYS.CSV')
+df_busco = pd.read_csv('keys.csv')
 print(df_busco)
 
 dic_busco = df_busco.set_index('key').T.to_dict('list')
