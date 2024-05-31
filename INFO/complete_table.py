@@ -169,5 +169,5 @@ for elm in dir_busco:
 
 print(DF)
 
-DF.to_csv('FINAL_TABLE', index = False)
+DF.to_csv('FINAL_TABLE.csv', index = False)
 
