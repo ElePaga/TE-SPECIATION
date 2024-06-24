@@ -10,10 +10,7 @@ if  __name__ == '__main__':
 	f_rm = sys.argv[2]
 
 
-sample = 'SRR'
-for c in f_c:
-	if c in ['0','1','2','3','4','5','6','7','8','9']:
-		sample = sample + c
+sample = f_rm[12:len(f_rm)-15]
 
 file_rm = open(f_rm, 'r')
 file_c = open(f_c, 'r')
@@ -62,8 +59,8 @@ for c in nodes_all:
 		nodes_clean.append(c)
 
 print(nodes_clean)
-#c_l = '../clean_assemblies/' + sample + '_contig_list.csv'
-c_l = '../PROVA/' + sample + '_contig_list.csv'
+c_l = '../clean_assemblies/' + sample + '_contig_list.csv'
+#c_l = '../PROVA/' + sample + '_contig_list.csv'
 contigs_list = open(c_l, 'w+')
 for cont in range(len(nodes_clean)):
 	contigs_list.write(nodes_clean[cont])
