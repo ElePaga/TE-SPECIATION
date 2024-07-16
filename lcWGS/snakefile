@@ -1,11 +1,13 @@
 #DEPENDENCIES
-sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
+#sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
+sample = glob_wildcards('../formica4Eleonora/{folder}/{sample}_1.fastq')[0]
 
 rule all:
 	input:
 		expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample),
-		expand('../busco_out/{sample}_busco', sample = sample),
-		expand('../g_size/respect/{sample}_respect/estimated-parameters.txt', sample = sample)
+#		expand('../busco_out/{sample}_busco', sample = sample),
+		expand('../g_size/respect/{sample}_respect/estimated-parameters.txt', sample = sample),
+		expand('../busco_metaeuk/{sample}_busco_metaeuk', sample = sample)
 
 # TRIMMOMATIC
 
@@ -23,14 +25,20 @@ Command line usage:
 
 rule trimmomatic:
 	input:
-		Reads1 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
-		Reads2 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_2.fastq'
+#		Reads1 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
+#		Reads2 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_2.fastq'
+		Reads1 = '../formica4Eleonora/{sample}/{sample}_1.fastq',
+		Reads2 = '../formica4Eleonora/{sample}/{sample}_2.fastq'
 	output:
-		l_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1P.fq',
-		r_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2P.fq',
-		l_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
-		r_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
-	threads: 4
+#		l_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1P.fq',
+#		r_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2P.fq',
+#		l_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
+#		r_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
+		l_P = '../formica4Eleonora/{sample}/{sample}.trimmed_1P.fq',
+		r_P = '../formica4Eleonora/{sample}/{sample}.trimmed_2P.fq',
+		l_U = '../formica4Eleonora/{sample}/{sample}.trimmed_1U.fq',
+		r_U = '../formica4Eleonora/{sample}/{sample}.trimmed_2U.fq'
+	threads: 8
 	log:
 		'../logs/trimmomatic/trimmomatic_{sample}.log'
 	shell:
@@ -55,7 +63,7 @@ rule spades:
 		s = '../assemblies/{sample}_spades'
 	output:
 		contigs = '../assemblies/{sample}_spades/contigs.fasta'
-	threads: 8
+	threads: 16
 	log:
 		'../logs/spades/spades_{sample}.log'
 	shell:	
@@ -77,7 +85,7 @@ rule mitoz:
 		mitoz_out = '{sample}_mitoscaf'		
 	output:
 		result = '../mitoz_outputs/{sample}_mitoscaf.result/{sample}_mitoscaf.mitogenome.fa'
-	threads: 4
+	threads: 16
 	conda: 'mitoz'
 	log:
 		'../logs/mitoz/mitoz_{sample}.log'
@@ -97,13 +105,13 @@ rule fcs:
 	params:
 		report = '../gx_out/{sample}_fcsgx_out'
 	output:
-		contam = '../gx_out/{sample}_fcsgx_out/contam.fasta'
-	threads: 8
+		contam = directory('../gx_out/{sample}_fcsgx_out')
+	threads: 16
 	log:
 		'../logs/fcs/fcs_{sample}.log'
 	shell:
 		'(python3 ../fcs.py screen genome --fasta {input.f} --out-dir {params.report}/ --gx-db ../../../../../DATABIG/dbs/gxdb --tax-id 72766; '
-		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {output.contam}) 2> {log}'
+		'cat {input.f} | python3 ../fcs.py clean genome --action-report {params.report}/contigs.72766.fcs_gx_report.txt --output {params.report}/clean.fasta --contam-fasta-out {params.report}/contam.fasta) 2> {log}'
 
 
 # MERGING CONTAMINANTS
@@ -114,7 +122,7 @@ rule merge:
 	output:
 		ToRemove = '../ToRemove/{sample}_ToRemove.fasta'
 	shell:
-		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant} >> {output.ToRemove}'
+		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant}/contam.fasta  >> {output.ToRemove}'
 
 # OBTAIN CLEAN ASSEMBLIES
 rule clean:
@@ -135,8 +143,7 @@ rule minimap:
 		reads2 = rules.trimmomatic.output.r_P
 	output:
 		bam = '../minimap_out/{sample}/{sample}_sr.bam',
-	threads:
-		10
+	threads: 16
 	log:
 		'../logs/minimap2/minimap2_{sample}.log'
 	shell:
@@ -174,7 +181,7 @@ rule samtools_flagstat:
 		'samtools flagstat {input.fq1} > {output.flag1}; '
 		'samtools flagstat {input.fq2} > {output.flag2}'
 
-
+'''
 # BUSCO 
 
 rule busco:
@@ -185,11 +192,27 @@ rule busco:
 	params:
 		bout_fold = '../busco_out/{sample}_busco'
 	conda: 'BuscO'
-	threads: 4
+	threads: 16
 	log:
 		'../logs/busco/busco_{sample}.log'
 	shell:
 		'(busco -i {input.clean_f} -o {params.bout_fold} --mode genome -c {threads} -l metazoa_odb10) 2> {log}'	
+
+'''
+
+rule busco_metauk:
+	input:
+		clean_f = rules.clean.output.clean_c
+	output:
+		directory('../busco_metaeuk/{sample}_busco_metaeuk')
+	params:
+		bout_fold = '../busco_metaeuk/{sample}_busco_metaeuk'
+	conda: 'BuscO'
+	threads: 8
+	log:
+		'../logs/busco_metaeuk/busco_metaeuk_{sample}.log'
+	shell:
+		'(busco -i {input.clean_f} -o {params.bout_fold} --mode genome -c {threads} -l metazoa_odb10 --metaeuk) 2> {log}'
 
 # GENOME SIZE
 
@@ -202,6 +225,6 @@ rule respect:
 	params:
 		rout_fold = '../g_size/respect/{sample}_respect'
 	conda: 'respect'
-	threads: 4
+	threads: 16
 	shell:
 		'respect -i {input.i1} {input.i2} -o {params.rout_fold} --debug --threads {threads}'
