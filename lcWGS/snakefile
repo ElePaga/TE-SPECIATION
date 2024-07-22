@@ -1,13 +1,14 @@
 #DEPENDENCIES
-#sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
-sample = glob_wildcards('../formica4Eleonora/{folder}/{sample}_1.fastq')[0]
+sample = glob_wildcards('../DatasetCreation/SRAfiles/fastq/{folder}/{sample}.sra_1.fastq')[0]
 
 rule all:
 	input:
 		expand('../minimap_out/{sample}/{sample}_sr1.flagstats', sample = sample),
-#		expand('../busco_out/{sample}_busco', sample = sample),
+		expand('../busco_out/{sample}_busco', sample = sample),
 		expand('../g_size/respect/{sample}_respect/estimated-parameters.txt', sample = sample),
-		expand('../busco_metaeuk/{sample}_busco_metaeuk', sample = sample)
+		expand('../busco_metaeuk/{sample}_busco_metaeuk', sample = sample),
+		expand('../minimap_out/{sample}/{sample}.sra_1_clean.fastq', sample = sample)
+
 
 # TRIMMOMATIC
 
@@ -25,19 +26,13 @@ Command line usage:
 
 rule trimmomatic:
 	input:
-#		Reads1 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
-#		Reads2 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_2.fastq'
-		Reads1 = '../formica4Eleonora/{sample}/{sample}_1.fastq',
-		Reads2 = '../formica4Eleonora/{sample}/{sample}_2.fastq'
+		Reads1 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
+		Reads2 = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_2.fastq'
 	output:
-#		l_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1P.fq',
-#		r_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2P.fq',
-#		l_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
-#		r_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
-		l_P = '../formica4Eleonora/{sample}/{sample}.trimmed_1P.fq',
-		r_P = '../formica4Eleonora/{sample}/{sample}.trimmed_2P.fq',
-		l_U = '../formica4Eleonora/{sample}/{sample}.trimmed_1U.fq',
-		r_U = '../formica4Eleonora/{sample}/{sample}.trimmed_2U.fq'
+		l_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1P.fq',
+		r_P = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2P.fq',
+		l_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_1U.fq',
+		r_U = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.trimmed_2U.fq'
 	threads: 8
 	log:
 		'../logs/trimmomatic/trimmomatic_{sample}.log'
@@ -46,6 +41,7 @@ rule trimmomatic:
 		'ILLUMINACLIP:../../miniconda3/envs/snakemake/share/trimmomatic/adapters/TruSeq3-PE.fa:2:30:10:2:TRUE '
 		'LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:95) 2> {log}'
 
+
 # SPADES
 
 '''
@@ -53,6 +49,7 @@ SPAdes is a genome assembler tool.
 It takes as input the two files of paired end reads. 
 Using k-mers it outputs contigs.fasta and scaffold.fasta.
 --isolate is recommended for multi-cell organisms.
+--memory needs to be adjusted based on the available RAM.
 '''
 
 rule spades:
@@ -70,12 +67,12 @@ rule spades:
 		'(spades.py -1 {input.l} -2 {input.r} --isolate -o {params.s} -t {threads} --memory 400) 2> {log}'
 
 
-
 # MITOZ
 
 '''
 MitoZ provides a "one-click" solution to get annotated mitogenomes from raw data fastq files.
 -findmitoscaf searches for mitochondrial sequences from input fasta file.
+--clade and --requiring_taxa need to be adjusted based on the analyzed organisms.
 '''
 
 rule mitoz:
@@ -94,11 +91,14 @@ rule mitoz:
 
 
 # FCS-GX
+
 '''
 FCS, a quality assurance process used to make data suitable for submission.
 FCS-GX is a sub-part of FCS searches for sequences from a wide range of organisms including bacteria, fungi, protists, viruses, 
 and others to identify sequences that don’t look like they are from the intended organism.
+--tax-id needs to be adjusted based on the analysed organisms.
 '''
+
 rule fcs:
 	input:
 		f = rules.spades.output.contigs
@@ -115,6 +115,7 @@ rule fcs:
 
 
 # MERGING CONTAMINANTS
+
 rule merge:
 	input:
 		mito = rules.mitoz.output.result,
@@ -124,7 +125,9 @@ rule merge:
 	shell:
 		'touch {output.ToRemove}; cat {input.mito} >> {output.ToRemove}; cat {input.contaminant}/contam.fasta  >> {output.ToRemove}'
 
+
 # OBTAIN CLEAN ASSEMBLIES
+
 rule clean:
 	input:
 		all_c = rules.spades.output.contigs,
@@ -135,7 +138,14 @@ rule clean:
 	shell:
 		'python3 clean_contigs_snake.py {input.all_c} {input.rm_c}'
 
-# MINIMAP2
+
+# MINIMAP2 & SAMTOOLS
+
+'''
+Samtools and minimap2 are used to map the reads over the contigs without contaminats and mitogenome,
+as a result the reads associated to contaminant or mitochondrial sequences will be excluded.
+'''
+
 rule minimap:
 	input:
 		g  = rules.clean.output.clean_c,
@@ -148,7 +158,7 @@ rule minimap:
 		'../logs/minimap2/minimap2_{sample}.log'
 	shell:
 		'(minimap2 -t {threads} -ax sr {input.g} {input.reads1} {input.reads2} | samtools view -Sb  > {output.bam}) 2> {log}'	
-# SAMTOOLS
+
 
 rule samtools_sorted_bam:
 	input:
@@ -161,6 +171,7 @@ rule samtools_sorted_bam:
 		'rm {input.b}; '
 		'samtools index {output.sorted}'
 		
+
 rule samtools_fastq:
 	input:
 		s_bam = rules.samtools_sorted_bam.output.sorted
@@ -169,6 +180,7 @@ rule samtools_fastq:
 		fastq2 = '../minimap_out/{sample}/{sample}.clean_2.fastq'
 	shell:
 		'samtools fastq -f 2 -@ 10 {input.s_bam} -1 {output.fastq1} -2 {output.fastq2}'
+
 
 rule samtools_flagstat:
 	input:
@@ -181,23 +193,12 @@ rule samtools_flagstat:
 		'samtools flagstat {input.fq1} > {output.flag1}; '
 		'samtools flagstat {input.fq2} > {output.flag2}'
 
-'''
+
 # BUSCO 
 
-rule busco:
-	input:
-		clean_f = rules.clean.output.clean_c 
-	output:
-		directory('../busco_out/{sample}_busco')
-	params:
-		bout_fold = '../busco_out/{sample}_busco'
-	conda: 'BuscO'
-	threads: 16
-	log:
-		'../logs/busco/busco_{sample}.log'
-	shell:
-		'(busco -i {input.clean_f} -o {params.bout_fold} --mode genome -c {threads} -l metazoa_odb10) 2> {log}'	
-
+'''
+The busco genes are retrieved.
+--metaeuk is required in order to obtain the output both as nucleotide and aminoacids sequences.
 '''
 
 rule busco_metauk:
@@ -214,7 +215,12 @@ rule busco_metauk:
 	shell:
 		'(busco -i {input.clean_f} -o {params.bout_fold} --mode genome -c {threads} -l metazoa_odb10 --metaeuk) 2> {log}'
 
+
 # GENOME SIZE
+
+'''
+RESPECT is a tool for estimating the repeat spectra and parameters such as genome length and coverage from low-coverage sequencing reads.
+'''
 
 rule respect:
 	input:
@@ -228,3 +234,30 @@ rule respect:
 	threads: 16
 	shell:
 		'respect -i {input.i1} {input.i2} -o {params.rout_fold} --debug --threads {threads}'
+
+
+# CLEAN READS ORIGINAL 
+'''
+The non-trimmed clean reads are retrieved to be used as input for DnaPipeTE
+'''
+
+rule clean_original_list:
+	input:
+		clean_r = rules.samtools_fastq.output.fastq1
+	output:
+		clean_list = '../mininimap_out/{sample}/{sample}_NoCont_Reads_1.txt'
+	shell:
+		'cat {input.clean_r} | grep "@" | sed "s/@//" > {output.clean_list}'
+
+
+rule clean_original:
+	input:
+		r_original = '../DatasetCreation/SRAfiles/fastq/{sample}/{sample}.sra_1.fastq',
+		cl_list = rules.clean_original_list.output.clean_list
+	output:
+		cl_ro = '../minimap_out/{sample}/{sample}.sra_1_clean.fastq.gz'
+	params:
+		cl_ro_uz = '../minimap_out/{sample}/{sample}.sra_1_clean.fastq'
+	shell:
+		'seqtk subseq {input.r_original} {input.cl_list} > {params.cl_ro_uz}; '
+		'gzip {params.cl_ro_uz}'
